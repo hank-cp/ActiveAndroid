@@ -95,6 +95,16 @@ public final class Cache {
         Log.v("Cache cleared.");
     }
 
+    public static synchronized void clearCache(Class<? extends Model> entityClazz) {
+        SoftReference<Model> removedRef = null;
+        for (SoftReference<Model> ref: sEntities) {
+            Model model = ref.get();
+            if (model != null && (entityClazz.isAssignableFrom(model.getClass()))) {
+                sEntities.remove(removedRef);
+            }
+        }
+    }
+
     public static synchronized void dispose() {
         closeAllDatabase();
 
@@ -108,19 +118,27 @@ public final class Cache {
     // Database access
 
     public static synchronized SQLiteDatabase openDatabase(Class<?> type) {
+        if (sDatabaseHelper == null) return null;
         Class<? extends DbMetaData> metaDataType = ReflectionUtils.getDbMetaDataClass(type);
         DatabaseHelper databaseHelper = sDatabaseHelper.get(metaDataType);
         if (databaseHelper != null) return databaseHelper.getWritableDatabase();
-        throw new IllegalArgumentException("db meta" + metaDataType.getClass().getSimpleName() +" not found!");
+        throw new IllegalArgumentException("db meta " + metaDataType.getClass().getSimpleName() +" not found!");
     }
 
     public static synchronized void closeDatabase(Class<?> type) {
+        if (sDatabaseHelper == null) return;
         Class<? extends DbMetaData> metaDataType = ReflectionUtils.getDbMetaDataClass(type);
         DatabaseHelper databaseHelper = sDatabaseHelper.get(metaDataType);
-        if (databaseHelper != null) databaseHelper.close();
+        if (databaseHelper != null) {
+            try {
+                databaseHelper.getWritableDatabase().endTransaction();
+            } catch (Exception e) {}
+            databaseHelper.close();
+        }
     }
 
     public static synchronized void closeAllDatabase() {
+        if (sDatabaseHelper == null) return;
         for (DatabaseHelper databaseHelper : sDatabaseHelper.values()) {
             databaseHelper.close();
         }
@@ -167,18 +185,22 @@ public final class Cache {
     // Model cache
 
     public static synchronized Collection<TableInfo> getTableInfos() {
+        if (sModelInfo == null) return null;
         return sModelInfo.getTableInfos();
     }
 
     public static synchronized TableInfo getTableInfo(Class<? extends Model> type) {
+        if (sModelInfo == null) return null;
         return sModelInfo.getTableInfo(type);
     }
 
     public static synchronized TypeSerializer getParserForType(Class<?> type) {
+        if (sModelInfo == null) return null;
         return sModelInfo.getTypeSerializer(type);
     }
 
     public static synchronized String getTableName(Class<? extends Model> type) {
+        if (sModelInfo == null) return null;
         return sModelInfo.getTableInfo(type).getTableName();
     }
 }

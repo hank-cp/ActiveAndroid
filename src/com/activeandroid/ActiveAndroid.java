@@ -43,6 +43,10 @@ public final class ActiveAndroid {
         Cache.clearCache();
     }
 
+    public static void clearCache(Class<? extends Model> entityClazz) {
+        Cache.clearCache(entityClazz);
+    }
+
     public static void dispose() {
         Cache.dispose();
     }

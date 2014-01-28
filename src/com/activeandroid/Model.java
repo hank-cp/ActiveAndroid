@@ -49,7 +49,7 @@ public abstract class Model {
 
     public Model() {
         mTableInfo = Cache.getTableInfo(getClass());
-        Cache.addEntity(this);
+        if (mTableInfo != null) Cache.addEntity(this);
     }
 
     //////////////////////////////////////////////////////////////////////////////////////
@@ -71,6 +71,8 @@ public abstract class Model {
     }
 
     public final void save() {
+        preSave();
+
         final SQLiteDatabase db = Cache.openDatabase(ReflectionUtils.getDbMetaDataClass(getClass()));
         final ContentValues values = new ContentValues();
 
@@ -153,6 +155,8 @@ public abstract class Model {
         else {
             db.update(mTableInfo.getTableName(), values, "Id=" + mId, null);
         }
+
+        postSave();
     }
 
     // Convenience methods
@@ -161,8 +165,11 @@ public abstract class Model {
         new Delete().from(type).where("Id=?", id).execute();
     }
 
+    @SuppressWarnings("unchecked")
     public static <T extends Model> T load(Class<? extends Model> type, long id) {
-        return new Select().from(type).where("Id=?", id).executeSingle();
+        T entity = (T) new Select().from(type).where("Id=?", id).executeSingle();
+        if (entity != null) entity.postLoad();
+        return entity;
     }
 
     // Model population
@@ -255,6 +262,7 @@ public abstract class Model {
                 Log.e(e.getMessage());
             }
         }
+        postLoad();
     }
 
     //////////////////////////////////////////////////////////////////////////////////////
@@ -276,4 +284,13 @@ public abstract class Model {
         return this.mId != null && (this.mTableInfo.getTableName().equals(other.mTableInfo.getTableName()))
                 && (this.mId.equals(other.mId));
     }
+
+    //////////////////////////////////////////////////////////////////////////////////////
+    // EVENT INTERFACE
+    //////////////////////////////////////////////////////////////////////////////////////
+
+    protected void preSave() {};
+    protected void postSave() {};
+    protected void postLoad() {};
+
 }

@@ -124,6 +124,13 @@ public final class SQLiteUtils {
                 TextUtils.join(", ", definitions));
     }
 
+
+    public static String dropTableDefinition(TableInfo tableInfo){
+
+        return String.format("DROP TABLE IF EXISTS %s;", tableInfo.getTableName());
+
+    }
+
     public static String createIndexDefinition(TableInfo tableInfo){
         List<String> createIndexSql=new LinkedList<String>();
 

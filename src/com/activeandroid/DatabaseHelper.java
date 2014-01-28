@@ -25,9 +25,11 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
@@ -70,8 +72,6 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
             Log.d("generate index:" + SQLiteUtils.createIndexDefinition(tableInfo));
         }
 
-
-
         db.setTransactionSuccessful();
         db.endTransaction();
 
@@ -85,10 +85,9 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
             Log.i("Foreign Keys supported. Enabling foreign key features.");
         }
 
-        if (!executeMigrations(db, oldVersion, newVersion)) {
-            Log.i("No migrations found. Calling onCreate.");
-            onCreate(db);
-        }
+        executeMigrations(db, oldVersion, newVersion);
+        Log.i("No migrations found. Calling onCreate.");
+        onCreate(db);
     }
 
     //////////////////////////////////////////////////////////////////////////////////////
@@ -143,7 +142,6 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
             for (String file : files) {
                 try {
                     final int version = Integer.valueOf(file.replace(".sql", ""));
-
                     if (version > oldVersion && version <= newVersion) {
                         executeSqlScript(db, file);
                         migrationExecuted = true;
@@ -155,6 +153,22 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
                     Log.w("Skipping invalidly named file: " + file, e);
                 }
             }
+
+            HashSet<String> createdTableNames = new HashSet<String>();
+            Cursor cursor = db.rawQuery("select name from sqlite_master where type='table'", null);
+            if (cursor.moveToFirst()) {
+                while (cursor.moveToNext()) {
+                    createdTableNames.add(cursor.getString(0));
+                }
+            }
+            for (TableInfo tableInfo : Cache.getTableInfos()) {
+                if (createdTableNames.contains(tableInfo.getTableName())) continue;
+                db.execSQL(SQLiteUtils.createTableDefinition(tableInfo));
+                migrationExecuted = true;
+                Log.d("generate index:" + SQLiteUtils.createIndexDefinition(tableInfo));
+            }
+
+            mDbMetaData.onUpgrade(db, oldVersion, newVersion);
 
             db.setTransactionSuccessful();
             db.endTransaction();
@@ -173,12 +187,40 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
             String line = null;
 
             while ((line = reader.readLine()) != null) {
-                db.execSQL(line.replace(";", ""));
+                if (line.startsWith("#")) continue;
+                try{
+                    db.execSQL(line.replace(";", ""));
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
             }
         }
         catch (IOException e) {
             Log.e("Failed to execute " + file, e);
         }
+    }
+
+    private void dropAllTableAndCreate(SQLiteDatabase db){
+        try{
+            db.beginTransaction();
+
+            for (TableInfo tableInfo : Cache.getTableInfos()) {
+                db.execSQL(SQLiteUtils.dropTableDefinition(tableInfo));
+            }
+
+            db.setTransactionSuccessful();
+            db.endTransaction();
+            onCreate(db);
+        }  catch (Exception e) {
+            e.printStackTrace();
+            Log.e("Failed to execute drop all table");
+        }
+    }
+
+
+    @Override
+    public void onDowngrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        dropAllTableAndCreate(db);
     }
 
 }

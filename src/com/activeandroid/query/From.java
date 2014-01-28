@@ -195,10 +195,11 @@ public final class From implements Sqlable {
         }
     }
 
+    @SuppressWarnings("unchecked")
     public <T extends Model> T executeSingle() {
         if (mQueryBase instanceof Select) {
             limit(1);
-            return SQLiteUtils.rawQuerySingle(mType, toSql(), getArguments());
+            return (T) SQLiteUtils.rawQuerySingle(mType, toSql(), getArguments());
         }
         else {
             SQLiteUtils.execSql(mType, toSql(), getArguments());

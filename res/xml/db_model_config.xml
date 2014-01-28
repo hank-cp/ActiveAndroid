@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<db_model_config>
+    <class>com.activeandroid.serializer.CalendarSerializer</class>
+    <class>com.activeandroid.serializer.SqlDateSerializer</class>
+    <class>com.activeandroid.serializer.UtilDateSerializer</class>
+</db_model_config>
