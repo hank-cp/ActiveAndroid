@@ -1,5 +1,5 @@
 ## Originally folk from [ActiveAndroid](https://github.com/hank-cp/ActiveAndroid)
-## This fold add multiple database support and some performance optimization
+#### This folk add multiple database support and some performance optimization
 
 ## Usage (different from original code stream)
 
